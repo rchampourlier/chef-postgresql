@@ -31,6 +31,14 @@ when "ubuntu"
     keyserver "keyserver.ubuntu.com"
     key "8683D8A2"
     action :add
-    notifies :run, resources(:execute => "apt-get update"), :immediately
+    #notifies :run, resources(:execute => "apt-get update"), :immediately
   end
+end
+
+# Doing this here instead of through the notifies to ensure it happens late
+# enough for the repository to be listed when the apt-get update is performed.
+execute "apt-get update" do
+  command "apt-get update"
+  ignore_failure true
+  action :run
 end
