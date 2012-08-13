@@ -20,6 +20,7 @@
 #
 
 ::Chef::Recipe.send(:include, Opscode::OpenSSL::Password)
+::Chef::Recipe.send(:include, Chef::PostgreSQL::RecipeHelpers)
 
 include_recipe "postgresql::dev"
 include_recipe "postgresql::client"
@@ -61,6 +62,8 @@ template "#{node[:postgresql][:dir]}/pg_hba.conf" do
   notifies :reload, resources(:service => "postgresql"), :immediately
 end
 
+_service_name = determine_service_name
+
 # Default PostgreSQL install has 'ident' checking on unix user 'postgres'
 # and 'md5' password checking with connections from 'localhost'. This script
 # runs as user 'postgres', so we can execute the 'role' and 'database' resources
@@ -70,7 +73,7 @@ bash "assign-postgres-password" do
   code <<-EOH
 echo "ALTER ROLE postgres ENCRYPTED PASSWORD '#{node[:postgresql][:password][:postgres]}';" | psql
   EOH
-  only_if "invoke-rc.d postgresql status | grep main" # make sure server is actually running
+  only_if "invoke-rc.d #{_service_name} status | grep main" # make sure server is actually running
   not_if do
     begin
       require 'rubygems'

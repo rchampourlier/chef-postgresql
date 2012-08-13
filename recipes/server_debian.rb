@@ -20,6 +20,8 @@
 # limitations under the License.
 #
 
+::Chef::Recipe.send(:include, Chef::PostgreSQL::RecipeHelpers)
+
 include_recipe "postgresql::dev"
 
 case node[:postgresql][:version]
@@ -31,27 +33,9 @@ end
 
 package "postgresql"
 
+_service_name = determine_service_name
 service "postgresql" do
-  case node['platform']
-  when "ubuntu"
-    case
-    # PostgreSQL 9.1 on Ubuntu 10.04 gets set up as "postgresql", not "postgresql-9.1"
-    # Is this because of the PPA?
-    when node['platform_version'].to_f <= 10.04 && node['postgresql']['version'].to_f < 9.0
-      service_name "postgresql-#{node['postgresql']['version']}"
-    else
-      service_name "postgresql"
-    end
-  when "debian"
-    case
-    when platform_version.to_f <= 5.0
-      service_name "postgresql-#{node['postgresql']['version']}"
-    when platform_version =~ /squeeze/
-      service_name "postgresql"
-    else
-      service_name "postgresql"
-    end
-  end
+  service_name _service_name
   supports :restart => true, :status => true, :reload => true
   action :nothing
 end
