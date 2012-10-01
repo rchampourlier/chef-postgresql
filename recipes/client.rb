@@ -22,7 +22,11 @@
 
 pg_packages = case node['platform']
 when "ubuntu","debian"
-  %w{postgresql-client}
+  if node[:postgresql][:version].to_f < 9
+    'postgresql-client'
+  else # should work for 9.1 and 9.2
+    "postgresql-client-#{node[:postgresql][:version]}"
+  end
 end
 
 pg_packages.each do |pg_pack|

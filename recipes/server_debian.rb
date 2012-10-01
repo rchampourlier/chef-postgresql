@@ -31,7 +31,18 @@ else # > 8.3
   node.default[:postgresql][:ssl] = "true"
 end
 
-package "postgresql"
+pg_packages = case node['platform']
+if node[:postgresql][:version].to_f < 9
+  'postgresql-server'
+else # should work for 9.1 and 9.2
+  "postgresql-server-#{node[:postgresql][:version]}"
+end
+
+pg_packages.each do |pg_pack|
+  package pg_pack do
+    action :install
+  end
+end
 
 _service_name = determine_service_name
 service "postgresql" do
