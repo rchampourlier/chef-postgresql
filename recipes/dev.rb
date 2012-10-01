@@ -1,6 +1,6 @@
 #
 # Cookbook Name:: postgresql
-# Recipe:: client
+# Recipe:: dev
 #
 # Author:: Romain Champourlier (<romain@softr.li>)
 # Author:: Joshua Timberman (<joshua@opscode.com>)
