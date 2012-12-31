@@ -33,9 +33,9 @@ end
 
 pg_packages = (
   if node[:postgresql][:version].to_f < 9
-    'postgresql'
+    ['postgresql']
   else # should work for 9.1 and 9.2
-    "postgresql-#{node[:postgresql][:version]}"
+    ["postgresql-#{node[:postgresql][:version]}"]
   end
 )
 
