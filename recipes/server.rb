@@ -19,12 +19,12 @@
 # limitations under the License.
 #
 
+include_recipe "openssl"
 ::Chef::Recipe.send(:include, Opscode::OpenSSL::Password)
 ::Chef::Recipe.send(:include, Chef::PostgreSQL::RecipeHelpers)
 
 include_recipe "postgresql::dev"
 include_recipe "postgresql::client"
-include_recipe "openssl"
 
 # randomly generate postgres password
 node.set_unless[:postgresql][:password][:postgres] = secure_password
