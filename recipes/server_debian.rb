@@ -1,8 +1,8 @@
+# -*- coding: utf-8 -*-
 #
 # Cookbook Name:: postgresql
 # Recipe:: server
 #
-# Author:: Brad Montgomery (<bmontgomery@coroutine.com>)
 # Author:: Joshua Timberman (<joshua@opscode.com>)
 # Author:: Lamont Granquist (<lamont@opscode.com>)#
 # Copyright 2009-2011, Opscode, Inc.
@@ -31,37 +31,74 @@ else # > 8.3
   node.default[:postgresql][:ssl] = "true"
 end
 
-pg_packages = (
-  if node[:postgresql][:version].to_f < 9
-    ['postgresql']
-  else # should work for 9.1 and 9.2
-    ["postgresql-#{node[:postgresql][:version]}"]
-  end
-)
-
-pg_packages.each do |pg_pack|
-  package pg_pack do
-    action :install
+package "postgresql" do
+  case node[:platform]
+  when "ubuntu"
+    case
+    when node[:platform_version].to_f <= 10.04 && node[:postgresql][:version].to_f < 9.0
+      package_name "postgresql"
+    else
+      package_name "postgresql-#{node[:postgresql][:version]}"
+    end
+  else
+    package_name "postgresql"
   end
 end
 
-_service_name = determine_service_name
+if node.default[:postgresql][:ssl] == 'true' &&
+  node[:postgresql].has_key?(:ssl_password)
+
+  data_dir = node[:postgresql][:data_dir]
+  server_key = File.join(data_dir, 'server.key')
+  bash 'generate-ssl-keys' do
+    user 'postgres'
+    group 'postgres'
+    cwd data_dir
+    # Steps from http://www.howtoforge.com/postgresql-ssl-certificates
+    code <<-EOF
+      openssl genrsa -des3 -passout pass:#{node[:postgresql][:ssl_password]} -out server.key 1024;
+      openssl rsa -passin pass:#{node[:postgresql][:ssl_password]} -in server.key -out server.key;
+      chmod 400 server.key;
+      openssl req -new -key server.key -days 3650 -out server.crt -x509 -subj '/C=PH/ST=Metro Manila/L=NA/O=Stiltify/CN=stiltify.com/emailAddress=hello@stiltify.com';
+    EOF
+    not_if { File.exists?(server_key) }
+  end
+end
+
+
 service "postgresql" do
-  service_name _service_name
+  case node['platform']
+  when "ubuntu"
+    case
+    # PostgreSQL 9.1 on Ubuntu 10.04 gets set up as "postgresql", not "postgresql-9.1"
+    # Is this because of the PPA? And is this still the case?
+    when node['platform_version'].to_f <= 10.04 && node['postgresql']['version'].to_f < 9.0
+      service_name "postgresql-#{node['postgresql']['version']}"
+    else
+      service_name "postgresql"
+    end
+  when "debian"
+    case
+    when node['platform_version'].to_f <= 5.0
+      service_name "postgresql-#{node['postgresql']['version']}"
+    else
+      service_name "postgresql"
+    end
+  end
   supports :restart => true, :status => true, :reload => true
   action :nothing
 end
 
-postgresql_conf_source = begin
-  if node[:postgresql][:version] == "9.1"
-    "debian.postgresql_91.conf.erb"
-  else
-    "debian.postgresql.conf.erb"
-  end
+directory "#{node[:postgresql][:dir]}" do
+  owner "postgres"
+  group "postgres"
+  mode 0600
+  recursive true
+  action :create
 end
 
 template "#{node[:postgresql][:dir]}/postgresql.conf" do
-  source postgresql_conf_source
+  source "debian.postgresql.conf.erb"
   owner "postgres"
   group "postgres"
   mode 0600
